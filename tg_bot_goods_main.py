@@ -1,7 +1,19 @@
 import asyncio
 import logging
+import sys
+import platform
 
+from pathlib import Path
+from telegram import Update
+from telegram.ext import Application, CommandHandler
+
+#импорты функций из скриптов проекта
 from token_reader import get_token
+from tg_handlers import start_command, help_command, catalog_command
+
+
+
+
 
 def setup_logging():
     """Настройка записи ВСЕХ логов в файл"""
@@ -77,7 +89,7 @@ def setup_logging():
     logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 
-async def main():
+def main():
     """Основная асинхронная функция бота."""
     # 1. Настраиваем логирование
     setup_logging()
@@ -98,14 +110,19 @@ async def main():
 
     # 3. Инициализация бота
     try:
-        from telegram.ext import Application, CommandHandler
-        from handlers import start_command, help_command, catalog_command
-
         # Создаем Application
         application = Application.builder().token(BOT_TOKEN).build()
 
+        #loop = asyncio.new_event_loop()
+        #asyncio.set_event_loop(loop)
+
         # Получаем информацию о боте
-        bot_info = await application.bot.get_me()
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        bot_info = loop.run_until_complete(application.bot.get_me())
+
         logger.info(f"Бот: @{bot_info.username} (ID: {bot_info.id})")
 
         # Регистрируем команды
@@ -117,7 +134,7 @@ async def main():
 
         # 4. Запуск бота
         logger.info("Запуск телеграм бота...")
-        await application.run_polling(allowed_updates=Update.ALL_TYPES)
+        application.run_polling(drop_pending_updates=True)
 
     except ImportError as e:
         logger.error(f"Ошибка импорта: {e}")
@@ -128,9 +145,13 @@ async def main():
         logger.info("Бот остановлен")
         logger.info("=" * 50)
 
-
-    # 4. Заглушка для будущего кода
-    # TODO: Инициализировать Application, добавить handlers и запустить polling
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    #for linux
+    #asyncio.run(main())
+
+    #Windows спотыкается, поэтому запускаем так
+
+    if platform.system() == "Windows":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    main()
