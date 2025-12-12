@@ -21,8 +21,89 @@ from tg_handlers import (
     catalog_command,
     catalog_callback,
     photo_handler,
-    catalog_callback
+    add_to_basket_callback,
+    backet_command,
+    backet_callback,
+    clear_basket_callback,
+    checkout_order_callback,
+    main_menu_callback
 )
+
+
+def main():
+    """Основная асинхронная функция бота."""
+    # 1. Настраиваем логирование
+    setup_logging()
+    logger = logging.getLogger(__name__)
+
+    logger.info("=" * 50)
+    logger.info("Запуск Telegram бота-витрины")
+    logger.info("=" * 50)
+
+    # 2. Получаем токен из файла
+    try:
+        # Если файл не найден или пуст, программа завершится в token_reader.read_bot_token()
+        BOT_TOKEN = get_token()
+    except SystemExit:
+        logger.error("Не удалось получить токен. Завершение работы.")
+        return
+    logger.info("Токен успешно получен, инициализируем бота...")
+
+    # 3. Инициализация бота
+    try:
+        # Создаем Application
+        application = ApplicationBuilder().token(BOT_TOKEN).build()
+
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        bot_info = loop.run_until_complete(application.bot.get_me())
+        logger.info(f"Бот: @{bot_info.username} (ID: {bot_info.id})")
+
+        # Регистрируем команды
+        application.add_handler(CommandHandler("start", start_command))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("catalog", catalog_command))
+        application.add_handler(CommandHandler("backet", backet_command))
+
+        application.add_handler(MessageHandler(filters.PHOTO, photo_handler))
+
+        application.add_handler(CallbackQueryHandler(catalog_callback, pattern="show_catalog"))
+        # регулярное выражение, чтобы обработчик реагировал только на кнопки с backet_add_ и числом.
+        application.add_handler(CallbackQueryHandler(add_to_basket_callback, pattern=r"^backet_add_\d+$"))
+        application.add_handler(CallbackQueryHandler(backet_callback, pattern="show_basket"))
+        application.add_handler(CallbackQueryHandler(clear_basket_callback, pattern="clear_basket"))
+        application.add_handler(CallbackQueryHandler(checkout_order_callback, pattern="checkout_order"))
+        application.add_handler(CallbackQueryHandler(main_menu_callback, pattern="main_menu"))
+
+        # Обработчики callback кнопок
+        application.add_handler(CallbackQueryHandler(confirm_checkout_callback, pattern="^confirm_checkout$"))
+        application.add_handler(CallbackQueryHandler(skip_email_callback, pattern="^skip_email$"))
+        application.add_handler(CallbackQueryHandler(edit_order_data_callback, pattern="^edit_order_data$"))
+        application.add_handler(CallbackQueryHandler(edit_name_callback, pattern="^edit_name$"))
+        application.add_handler(CallbackQueryHandler(edit_phone_callback, pattern="^edit_phone$"))
+        application.add_handler(CallbackQueryHandler(edit_email_callback, pattern="^edit_email$"))
+        application.add_handler(CallbackQueryHandler(back_to_confirmation_callback, pattern="^back_to_confirmation$"))
+        application.add_handler(CallbackQueryHandler(cancel_checkout_callback, pattern="^cancel_checkout$"))
+        application.add_handler(CallbackQueryHandler(create_order_callback, pattern="^create_order$"))
+
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
+
+        logger.info(f"Зарегистрировано команд: {len(application.handlers[0])}")
+
+        # 4. Запуск бота
+        logger.info("Запуск телеграм бота...")
+        application.run_polling(drop_pending_updates=True)
+
+    except ImportError as e:
+        logger.error(f"Ошибка импорта: {e}")
+        logger.info("Установите: pip install python-telegram-bot")
+    except Exception as e:
+        logger.exception(f"Ошибка: {e}")
+    finally:
+        logger.info("Бот остановлен")
+        logger.info("=" * 50)
 
 
 def setup_logging():
@@ -43,7 +124,7 @@ def setup_logging():
     # Очищаем старые обработчики (чтобы не дублировались при повторном вызове)
     root_logger.handlers.clear()
 
-    root_logger.setLevel(logging.INFO) #для отладки
+    root_logger.setLevel(logging.INFO) #текущий уровень логирования
     # === ВАЖНО ===
     # Устанавливаем INFO уровень на корневом логгере
     # Это позволит записывать ВСЕ сообщения кроме DEBUG
@@ -97,65 +178,6 @@ def setup_logging():
     logging.getLogger("telegram").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
-
-
-def main():
-    """Основная асинхронная функция бота."""
-    # 1. Настраиваем логирование
-    setup_logging()
-    logger = logging.getLogger(__name__)
-
-    logger.info("=" * 50)
-    logger.info("Запуск Telegram бота-витрины")
-    logger.info("=" * 50)
-
-    # 2. Получаем токен из файла
-    try:
-        # Если файл не найден или пуст, программа завершится в token_reader.read_bot_token()
-        BOT_TOKEN = get_token()
-    except SystemExit:
-        logger.error("Не удалось получить токен. Завершение работы.")
-        return
-    logger.info("Токен успешно получен, инициализируем бота...")
-
-    # 3. Инициализация бота
-    try:
-        # Создаем Application
-        application = ApplicationBuilder().token(BOT_TOKEN).build()
-
-        #loop = asyncio.new_event_loop()
-        #asyncio.set_event_loop(loop)
-
-        # Получаем информацию о боте
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        bot_info = loop.run_until_complete(application.bot.get_me())
-
-        logger.info(f"Бот: @{bot_info.username} (ID: {bot_info.id})")
-
-        # Регистрируем команды
-        application.add_handler(CommandHandler("start", start_command))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("catalog", catalog_command))
-        application.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-        application.add_handler(CallbackQueryHandler(catalog_callback, pattern="show_catalog"))
-
-        logger.info(f"Зарегистрировано команд: {len(application.handlers[0])}")
-
-        # 4. Запуск бота
-        logger.info("Запуск телеграм бота...")
-        application.run_polling(drop_pending_updates=True)
-
-    except ImportError as e:
-        logger.error(f"Ошибка импорта: {e}")
-        logger.info("Установите: pip install python-telegram-bot")
-    except Exception as e:
-        logger.exception(f"Ошибка: {e}")
-    finally:
-        logger.info("Бот остановлен")
-        logger.info("=" * 50)
 
 if __name__ == "__main__":
     #for linux

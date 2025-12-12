@@ -13,6 +13,9 @@ CREATE TABLE tgbot_vitrina2026.products (
     deleted_at      TIMESTAMP
 );
 
+alter table tgbot_vitrina2026.products 
+add column sort INT NOT NULL DEFAULT 0;
+
 CREATE OR REPLACE FUNCTION tgbot_vitrina2026.update_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -49,6 +52,41 @@ VALUES
      Подойдёт для стола, тумбы или небольшого пространства.',
     2999.99
 );
+
+UPDATE tgbot_vitrina2026.products
+SET description = REPLACE(description, '<br>', E'\n')
+WHERE description LIKE '%<br>%';
+
+update tgbot_vitrina2026.products
+set price = trunc(price)
+
+update tgbot_vitrina2026.products
+set name = '<b>' || name || '</b>';
+
+update tgbot_vitrina2026.products
+SET description = REPLACE(description, '<b>', '')
+WHERE description LIKE '%<b>%';
+
+update tgbot_vitrina2026.products
+SET description = REPLACE(description, '</b>', '')
+WHERE description LIKE '%</b>%';
+
+update tgbot_vitrina2026.products
+SET description = REPLACE(description, '  ', ' ')
+WHERE description LIKE '%  %';
+
+SELECT 
+	p.id, 
+	p.name, 
+	p.description, 
+	p.price,
+	f.telegram_file_id
+FROM tgbot_vitrina2026.products p
+LEFT JOIN product_photos f ON p.id = f.product_id
+WHERE 
+	is_deleted = FALSE
+	AND sort = 0
+ORDER BY id
 
 CREATE INDEX idx_products_not_deleted
 ON tgbot_vitrina2026.products (is_deleted)
@@ -113,3 +151,22 @@ GRANT USAGE ON SCHEMA tgbot_vitrina2026 TO tgbot_reader;
 -- Даем права SELECT на все существующие таблицы
 GRANT SELECT ON ALL TABLES IN SCHEMA tgbot_vitrina2026 TO tgbot_reader;
 
+
+-- Продолжаем создавать таблицы. Теперь Корзина
+CREATE TABLE tgbot_vitrina2026.user_basket (
+    id              SERIAL PRIMARY KEY,       -- Уникальный идентификатор записи
+    telegram_user_id BIGINT NOT NULL,         -- ID пользователя Telegram
+    product_id      INT NOT NULL REFERENCES tgbot_vitrina2026.products(id) ON DELETE CASCADE,  -- товар
+    quantity        INT NOT NULL DEFAULT 1,   -- количество единиц товара
+    added_at        TIMESTAMP NOT NULL DEFAULT NOW(),  -- дата и время добавления
+
+    UNIQUE(telegram_user_id, product_id)      -- чтобы один и тот же товар не дублировался для одного пользователя
+);
+
+--дадим пользователю tgbot_reader возможность работать с корзиной
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.user_basket_id_seq TO tgbot_reader;
+
+
+select * 
+from user_basket
