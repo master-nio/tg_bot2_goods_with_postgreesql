@@ -5,14 +5,24 @@ import platform
 
 from pathlib import Path
 from telegram import Update
-from telegram.ext import Application, CommandHandler
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    filters
+)
 
 #импорты функций из скриптов проекта
 from token_reader import get_token
-from tg_handlers import start_command, help_command, catalog_command
-
-
-
+from tg_handlers import (
+    start_command,
+    help_command,
+    catalog_command,
+    catalog_callback,
+    photo_handler,
+    catalog_callback
+)
 
 
 def setup_logging():
@@ -33,7 +43,7 @@ def setup_logging():
     # Очищаем старые обработчики (чтобы не дублировались при повторном вызове)
     root_logger.handlers.clear()
 
-    root_logger.setLevel(logging.DEBUG) #для отладки
+    root_logger.setLevel(logging.INFO) #для отладки
     # === ВАЖНО ===
     # Устанавливаем INFO уровень на корневом логгере
     # Это позволит записывать ВСЕ сообщения кроме DEBUG
@@ -111,7 +121,7 @@ def main():
     # 3. Инициализация бота
     try:
         # Создаем Application
-        application = Application.builder().token(BOT_TOKEN).build()
+        application = ApplicationBuilder().token(BOT_TOKEN).build()
 
         #loop = asyncio.new_event_loop()
         #asyncio.set_event_loop(loop)
@@ -129,6 +139,8 @@ def main():
         application.add_handler(CommandHandler("start", start_command))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("catalog", catalog_command))
+        application.add_handler(MessageHandler(filters.PHOTO, photo_handler))
+        application.add_handler(CallbackQueryHandler(catalog_callback, pattern="show_catalog"))
 
         logger.info(f"Зарегистрировано команд: {len(application.handlers[0])}")
 
