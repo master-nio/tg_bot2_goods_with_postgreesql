@@ -159,14 +159,261 @@ CREATE TABLE tgbot_vitrina2026.user_basket (
     product_id      INT NOT NULL REFERENCES tgbot_vitrina2026.products(id) ON DELETE CASCADE,  -- товар
     quantity        INT NOT NULL DEFAULT 1,   -- количество единиц товара
     added_at        TIMESTAMP NOT NULL DEFAULT NOW(),  -- дата и время добавления
-
     UNIQUE(telegram_user_id, product_id)      -- чтобы один и тот же товар не дублировался для одного пользователя
 );
+
+
+alter table tgbot_vitrina2026.user_basket
+add column updated_at TIMESTAMP NOT NULL DEFAULT NOW();
 
 --дадим пользователю tgbot_reader возможность работать с корзиной
 GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.user_basket_id_seq TO tgbot_reader;
 
 
-select * 
-from user_basket
+select  
+	--count(product_id) cnt_products,
+	--sum(quantity) qty_products,
+	p.name,
+	p.price,
+	b.quantity qty,
+	p.price * b.quantity as sum_position
+from tgbot_vitrina2026.user_basket b
+join tgbot_vitrina2026.products p on p.id = b.product_id
+where telegram_user_id = '219299367'
+
+
+select  
+	count(product_id) cnt_products,
+	COALESCE(SUM(quantity), 0) as qty_products,
+	COALESCE(SUM(p.price * b.quantity), 0) as sum_position
+from tgbot_vitrina2026.user_basket b
+join tgbot_vitrina2026.products p on p.id = b.product_id
+where telegram_user_id = '219299367'
+
+SELECT  
+                                COUNT(product_id) as cnt_products,
+                                COALESCE(SUM(quantity), 0) as qty_products,
+                                COALESCE(SUM(p.price * b.quantity),0) as sum_position
+                            FROM tgbot_vitrina2026.user_basket b
+                            JOIN tgbot_vitrina2026.products p ON p.id = b.product_id
+                            WHERE telegram_user_id  = '219299367'
+                            
+                            
+DELETE 
+FROM tgbot_vitrina2026.user_basket
+WHERE telegram_user_id  = '219299367'
+
+
+select * from user_basket
+
+
+CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.orders (
+    id SERIAL PRIMARY KEY,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    telegram_user_id VARCHAR(50) NOT NULL,
+    customer_name VARCHAR(100) NOT NULL,
+    customer_email VARCHAR(100),
+    customer_phone VARCHAR(20) NOT NULL,
+    total_amount DECIMAL(10, 2) NOT NULL CHECK (total_amount >= 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'new' 
+        CHECK (status IN ('new', 'processing', 'completed', 'cancelled')),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+COMMENT ON TABLE tgbot_vitrina2026.orders IS 'Таблица заказов пользователей';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.order_number IS 'Уникальный номер заказа';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.telegram_user_id IS 'ID пользователя в Telegram';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.customer_name IS 'Имя клиента';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.customer_email IS 'Email клиента (опционально)';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.customer_phone IS 'Телефон клиента';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.total_amount IS 'Общая сумма заказа';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.status IS 'Статус заказа: new, processing, completed, cancelled';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.created_at IS 'Дата создания заказа';
+COMMENT ON COLUMN tgbot_vitrina2026.orders.updated_at IS 'Дата последнего обновления';
+
+CREATE INDEX IF NOT EXISTS idx_orders_telegram_user 
+    ON tgbot_vitrina2026.orders(telegram_user_id);
+    
+CREATE INDEX IF NOT EXISTS idx_orders_status 
+    ON tgbot_vitrina2026.orders(status);
+    
+CREATE INDEX IF NOT EXISTS idx_orders_created 
+    ON tgbot_vitrina2026.orders(created_at);
+    
+
+-- Создаем последовательность для номеров заказов
+CREATE SEQUENCE IF NOT EXISTS tgbot_vitrina2026.order_number_seq
+    START WITH 1000
+    INCREMENT BY 1;
+
+-- Посмотреть текущее значение
+SELECT currval('tgbot_vitrina2026.order_number_seq');
+   
+-- Или если последовательность ещё не использовалась:
+SELECT last_value FROM tgbot_vitrina2026.order_number_seq;
+
+-- Вся информация о последовательности
+SELECT * FROM information_schema.sequences 
+WHERE sequence_schema = 'tgbot_vitrina2026' 
+AND sequence_name = 'order_number_seq';
+
+-- Сбросить на 1000 (или другое значение)
+ALTER SEQUENCE tgbot_vitrina2026.order_number_seq RESTART WITH 1000;
+
+-- Функция для генерации номера заказа
+CREATE OR REPLACE FUNCTION tgbot_vitrina2026.generate_order_number()
+RETURNS VARCHAR AS $$
+DECLARE
+    next_val INTEGER;
+    order_num VARCHAR;
+BEGIN
+    SELECT nextval('tgbot_vitrina2026.order_number_seq') INTO next_val;
+    order_num := 'ORD-' || to_char(CURRENT_DATE, 'YYYYMMDD') || '-' || LPAD(next_val::TEXT, 4, '0');
+    RETURN order_num;
+END;
+$$ LANGUAGE plpgsql;
+ 
+-- 5. Функция и триггер для updated_at (если ещё нет)
+CREATE OR REPLACE FUNCTION tgbot_vitrina2026.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_orders_updated_at ON tgbot_vitrina2026.orders;
+CREATE TRIGGER update_orders_updated_at 
+    BEFORE UPDATE ON tgbot_vitrina2026.orders
+    FOR EACH ROW
+    EXECUTE FUNCTION tgbot_vitrina2026.update_updated_at_column();
+
+select generate_order_number()
+
+
+
+
+CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.order_items (
+    id SERIAL PRIMARY KEY,
+    order_number_id INT NOT NULL REFERENCES tgbot_vitrina2026.orders(id) ON DELETE CASCADE,  -- id заказа
+    product_id      INT NOT NULL REFERENCES tgbot_vitrina2026.products(id),
+    product_name VARCHAR(200) NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    price_at_order NUMERIC(10,2) CHECK (price_at_order >= 0),
+	subtotal DECIMAL(10, 2) GENERATED ALWAYS AS (price_at_order * quantity) STORED,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT unique_order_product UNIQUE (order_number_id, product_id)
+);
+
+-- Комментарии
+COMMENT ON TABLE tgbot_vitrina2026.order_items IS 'Состав заказа (позиции)';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.order_number_id IS 'Ссылка на заказ';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.product_id IS 'ID товара';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.product_name IS 'Название товара на момент заказа';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.quantity IS 'Количество товара';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.price_at_order IS 'Цена товара на момент оформления заказа';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.subtotal IS 'Сумма по позиции (цена × количество)';
+COMMENT ON COLUMN tgbot_vitrina2026.order_items.created_at IS 'Дата создания записи';
+
+-- Создание индексов отдельно
+CREATE INDEX IF NOT EXISTS idx_order_items_order 
+    ON tgbot_vitrina2026.order_items(order_number_id);
+    
+CREATE INDEX IF NOT EXISTS idx_order_items_product 
+    ON tgbot_vitrina2026.order_items(product_id);
+
+select * from order_items
+
+
+DROP FUNCTION tgbot_vitrina2026.create_order_from_basket
+CREATE OR REPLACE FUNCTION tgbot_vitrina2026.create_order_from_basket(
+    p_telegram_user_id VARCHAR,
+    p_customer_name VARCHAR,
+    p_customer_phone VARCHAR,
+    p_customer_email VARCHAR DEFAULT NULL
+)
+RETURNS TABLE (
+    order_number VARCHAR
+) AS $$
+DECLARE
+    v_order_id INTEGER;
+    v_order_number VARCHAR;
+    v_total_amount DECIMAL(10,2);
+    v_items_count INTEGER;
+BEGIN
+    -- Проверяем что корзина не пуста
+    SELECT COUNT(*), COALESCE(SUM(p.price * b.quantity), 0)
+    INTO v_items_count, v_total_amount
+    FROM tgbot_vitrina2026.user_basket b
+    JOIN tgbot_vitrina2026.products p ON p.id = b.product_id
+    WHERE b.telegram_user_id = p_telegram_user_id;
+    
+    IF v_items_count = 0 OR v_total_amount = 0 THEN
+        RAISE EXCEPTION 'Корзина пуста или сумма заказа равна 0';
+    END IF;
+    
+    -- Генерируем номер заказа
+    v_order_number := tgbot_vitrina2026.generate_order_number();
+    
+    -- Начинаем транзакцию
+    BEGIN
+        -- Создаем запись в таблице orders
+        INSERT INTO tgbot_vitrina2026.orders (
+            order_number,
+            telegram_user_id,
+            customer_name,
+            customer_email,
+            customer_phone,
+            total_amount,
+            status
+        ) VALUES (
+            v_order_number,
+            p_telegram_user_id,
+            p_customer_name,
+            p_customer_email,
+            p_customer_phone,
+            v_total_amount,
+            'new'
+        ) RETURNING id INTO v_order_id;
+        
+        -- Переносим товары из корзины в order_items
+        INSERT INTO tgbot_vitrina2026.order_items (
+            order_number_id,
+            product_id,
+            product_name,
+            quantity,
+            price_at_order
+        )
+        SELECT 
+            v_order_id,
+            b.product_id,
+            p.name,
+            b.quantity,
+            p.price
+        FROM tgbot_vitrina2026.user_basket b
+        JOIN tgbot_vitrina2026.products p ON p.id = b.product_id
+        WHERE b.telegram_user_id = p_telegram_user_id;
+        
+        -- Очищаем корзину пользователя
+        DELETE FROM tgbot_vitrina2026.user_basket 
+        WHERE telegram_user_id = p_telegram_user_id;
+        
+        -- Возвращаем результат (БЕЗ status)
+        RETURN QUERY 
+        SELECT v_order_number;
+
+            
+    EXCEPTION
+        WHEN OTHERS THEN
+            -- Откатываем транзакцию при ошибке
+            RAISE;
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
