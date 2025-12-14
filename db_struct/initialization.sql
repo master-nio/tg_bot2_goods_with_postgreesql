@@ -168,7 +168,17 @@ add column updated_at TIMESTAMP NOT NULL DEFAULT NOW();
 
 --дадим пользователю tgbot_reader возможность работать с корзиной
 GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
+
+
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.user_basket_id_seq TO tgbot_reader;
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
+
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.order_items_id_seq TO tgbot_reader;
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.order_items TO tgbot_reader;
+
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.orders TO tgbot_reader;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.order_number_seq TO tgbot_reader;
+
 
 
 select  
@@ -331,9 +341,9 @@ CREATE INDEX IF NOT EXISTS idx_order_items_product
 select * from order_items
 
 
-DROP FUNCTION tgbot_vitrina2026.create_order_from_basket
+DROP FUNCTION tgbot_vitrina2026.create_order_from_basket;
 CREATE OR REPLACE FUNCTION tgbot_vitrina2026.create_order_from_basket(
-    p_telegram_user_id VARCHAR,
+    p_telegram_user_id BIGINT,
     p_customer_name VARCHAR,
     p_customer_phone VARCHAR,
     p_customer_email VARCHAR DEFAULT NULL
@@ -417,3 +427,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+select * from orders
+
+SELECT schemaname, sequencename 
+FROM pg_sequences 
+WHERE sequencename = 'order_number_seq';
+
+GRANT USAGE, SELECT ON SEQUENCE tgbot_vitrina2026.order_number_seq to tgbot_reader;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA tgbot_vitrina2026 TO tgbot_reader;
+
+SELECT 
+    proname,
+    proargtypes,
+    prosecdef,
+    provolatile,
+    pronargs,
+    prorettype,
+    proacl
+FROM pg_proc 
+WHERE proname = 'create_order_from_basket'
+AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'tgbot_vitrina2026');
+
+GRANT USAGE ON SCHEMA tgbot_vitrina2026 TO tgbot_reader;
+GRANT INSERT, SELECT, UPDATE ON tgbot_vitrina2026.orders TO tgbot_reader;
+GRANT INSERT, SELECT ON tgbot_vitrina2026.order_items TO tgbot_reader;
+GRANT DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
+GRANT SELECT ON tgbot_vitrina2026.products TO tgbot_reader;
+
+GRANT USAGE, SELECT ON SEQUENCE tgbot_vitrina2026.orders_id_seq TO tgbot_reader;

@@ -26,7 +26,18 @@ from tg_handlers import (
     backet_callback,
     clear_basket_callback,
     checkout_order_callback,
-    main_menu_callback
+    main_menu_callback,
+    confirm_checkout_callback,
+    skip_email_callback,
+    edit_order_data_callback,
+    edit_name_callback,
+    edit_phone_callback,
+    edit_email_callback,
+    back_to_confirmation_callback,
+    cancel_checkout_callback,
+    create_order_callback,
+    handle_text_input,
+    show_order_confirmation
 )
 
 
@@ -88,9 +99,12 @@ def main():
         application.add_handler(CallbackQueryHandler(cancel_checkout_callback, pattern="^cancel_checkout$"))
         application.add_handler(CallbackQueryHandler(create_order_callback, pattern="^create_order$"))
 
+        show_order_confirmation
+
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
         logger.info(f"Зарегистрировано команд: {len(application.handlers[0])}")
+
 
         # 4. Запуск бота
         logger.info("Запуск телеграм бота...")

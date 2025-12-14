@@ -747,6 +747,20 @@ async def handle_phone_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
             pass
 
 
+async def skip_email_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Пропуск ввода email"""
+    query = update.callback_query
+    await query.answer()
+
+    # Устанавливаем email как None
+    context.user_data['customer_email'] = None
+
+    # ДОБАВИТЬ ТАКЖЕ ЗДЕСЬ:
+    context.user_data['checkout_step'] = 'confirmation'  # ← ДОБАВИТЬ
+
+    # Переходим к подтверждению
+    await show_order_confirmation(update, context)
+
 async def handle_email_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик ввода email"""
     if update.message:
@@ -769,29 +783,38 @@ async def handle_email_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # Сохраняем email
         context.user_data['customer_email'] = user_input
 
+
+
+
         # Переходим к подтверждению
+        context.user_data['checkout_step'] = 'confirmation'
         await show_order_confirmation(update, context)
 
         # Удаляем предыдущее сообщение бота
-        try:
-            if 'last_bot_message_id' in context.user_data:
-                await context.bot.delete_message(
-                    chat_id=update.effective_chat.id,
-                    message_id=context.user_data['last_bot_message_id']
-                )
-        except:
-            pass
+        #try:
+        #    if 'last_bot_message_id' in context.user_data:
+        #        await context.bot.delete_message(
+        #           chat_id=update.effective_chat.id,
+        #            message_id=context.user_data['last_bot_message_id']
+        #        )
+        #except:
+        #    pass
 
 
 async def show_order_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показать подтверждение заказа со всеми данными"""
     message_obj = None
 
+    is_callback = False
+
     if update.callback_query:
         message_obj = update.callback_query.message
         await update.callback_query.answer()
+        is_callback = True
     elif update.message:
+        # Для текстового ввода всегда отправляем новое сообщение
         message_obj = update.message
+        is_callback = False
 
     if not message_obj:
         return
@@ -834,7 +857,7 @@ async def show_order_confirmation(update: Update, context: ContextTypes.DEFAULT_
         ]
     ])
 
-    if update.callback_query:
+    if is_callback:
         await message_obj.edit_text(
             text=confirmation_text,
             reply_markup=confirmation_keyboard,
@@ -986,7 +1009,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
 
     message_obj = query.message
-    telegram_user_id = str(update.effective_user.id)
+    telegram_user_id = int(update.effective_user.id)
 
     try:
         # Проверяем, что все необходимые данные собраны
@@ -1034,6 +1057,13 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
         )
         """
 
+        await message_obj.edit_text(
+            text="[DEBUG SQL]\n\n"
+                 "{order_query}",
+            parse_mode='HTML'
+        )
+
+
         result = await conn.fetch(order_query,
                                   telegram_user_id,
                                   customer_name,
@@ -1047,6 +1077,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
         # Получаем номер заказа
         order_number = result[0]['order_number']
+
 
         # Формируем сообщение об успешном оформлении
         order_details = "📦 <b>Ваш заказ успешно оформлен!</b>\n\n"
@@ -1071,13 +1102,16 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
         order_details += "\n"
 
         # Информация о следующем шаге
+        order_details += "✅ <b>Пока это демонстарционный магазин.</b>\n\n"
+        order_details += "✅ Если вы желаете подобный свяжитесь по контактам ниже.\n\n"
+        order_details += "\n\n"
         order_details += "✅ <b>Информация передана вашему персональному менеджеру.</b>\n\n"
         order_details += "⏳ <i>Ожидайте, с вами свяжутся для уточнения даты доставки заказа.</i>\n\n"
         order_details += "📞 <b>Контакты поддержки:</b>\n"
-        order_details += "Телефон: +7 (XXX) XXX-XX-XX\n"
-        order_details += "Email: support@example.com\n"
-        order_details += "Telegram: @your_support\n\n"
-        order_details += "<i>Спасибо за покупку! 😊</i>"
+        order_details += "Телефон: +7 (925) 000-60-75\n"
+        order_details += "Email: dashkevich.alexander@gmail.com\n"
+        order_details += "Telegram: @alexander_dashkevich\n\n"
+        order_details += "<i>Благодарим за покупку! 😊</i>"
 
         # Клавиатура после создания заказа
         success_keyboard = InlineKeyboardMarkup([
@@ -1086,7 +1120,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 InlineKeyboardButton("🛍️ В каталог", callback_data="catalog")
             ],
             [
-                InlineKeyboardButton("📞 Связаться с поддержкой", url="https://t.me/your_support"),
+                InlineKeyboardButton("📞 Связаться с поддержкой", url="https://t.me/alexander_dashkevich"),
                 InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")
             ]
         ])
