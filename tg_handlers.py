@@ -49,6 +49,10 @@ async def catalog_callback(update, context):
     await query.answer()  # подтверждаем нажатие, чтобы Telegram не показывал "крутящийся кружок"
     await catalog_command(update, context)
 
+async def main_menu_command(update, context):
+    query = update.callback_query
+    await query.answer()
+    await catalog_command(update, context)
 
 async def help_command(update, context):
     """Обработчик команды /help"""
@@ -1057,13 +1061,6 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
         )
         """
 
-        await message_obj.edit_text(
-            text="[DEBUG SQL]\n\n"
-                 "{order_query}",
-            parse_mode='HTML'
-        )
-
-
         result = await conn.fetch(order_query,
                                   telegram_user_id,
                                   customer_name,
@@ -1116,7 +1113,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
         # Клавиатура после создания заказа
         success_keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("📋 Мои заказы", callback_data="my_orders"),
+                InlineKeyboardButton("📋 Мои заказы", callback_data="show_orders"),
                 InlineKeyboardButton("🛍️ В каталог", callback_data="catalog")
             ],
             [
@@ -1179,7 +1176,6 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
             parse_mode='HTML'
         )
 
-
 async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_number: str,
                                     customer_name: str, customer_phone: str,
                                     total_amount: float, basket_items: list, user):
@@ -1233,3 +1229,150 @@ async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_nu
 
     except Exception as e:
         logger.error(f"Ошибка при отправке уведомления менеджеру: {e}")
+
+
+async def view_orders_callback(update, context):
+    query = update.callback_query
+    await query.answer()  # подтверждаем нажатие, чтобы Telegram не показывал "крутящийся кружок"
+    await orders_command(update, context)
+
+async def orders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показать заказы пользователя"""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        message_obj = query.message
+        user = query.from_user
+    else:
+        # Если вызывается из команды /myorders
+        message_obj = update.message
+        user = update.effective_user
+
+    telegram_user_id = user.id
+
+    username = user.username or user.first_name
+
+    try:
+        # Подключаемся к БД
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Запрос для получения заказов пользователя
+        orders_query = """
+            SELECT 
+                o.id,
+                order_number,
+                customer_name,
+                customer_email,
+                customer_phone,
+                total_amount,
+                status,
+                o.created_at,
+                (select count(1) from tgbot_vitrina2026.order_items i where o.id = i.order_number_id) cnt_items 
+            FROM tgbot_vitrina2026.orders o
+            WHERE o.telegram_user_id = $1
+            ORDER BY o.created_at DESC
+            LIMIT 50
+        """
+
+        orders = await conn.fetch(orders_query, telegram_user_id)
+        await conn.close()
+
+        if not orders:
+            # Нет заказов
+            no_orders_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🛍️ В каталог", callback_data="show_catalog")],
+                [InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")]
+            ])
+
+            text = f"📋 <b>Ваши заказы</b>\n\n"
+            text += f"У вас еще нет заказов.\n\n"
+            text += f"<i>Посмотрите наш каталог товаров!</i>"
+
+            if query:
+                await message_obj.edit_text(
+                    text=text,
+                    reply_markup=no_orders_keyboard,
+                    parse_mode='HTML'
+                )
+            else:
+                await message_obj.reply_text(
+                    text=text,
+                    reply_markup=no_orders_keyboard,
+                    parse_mode='HTML'
+                )
+            return
+
+        # Форматируем список заказов
+        orders_text = f"📋 <b>Ваши заказы</b>\n\n"
+        orders_text += f"Найдено заказов: {len(orders)}\n\n"
+
+        for i, order in enumerate(orders, 1):
+            # Форматируем дату
+            created_date = order['created_at'].strftime('%d.%m.%Y %H:%M')
+
+            # Определяем эмодзи статуса
+            status_emoji = {
+                'new': '🆕',
+                'processing': '🔄',
+                'completed': '✅',
+                'cancelled': '❌'
+            }.get(order['status'], '❓')
+
+            orders_text += f"<b>{i}. Заказ #{order['order_number']}</b>\n"
+            orders_text += f"   📅 Дата: {created_date}\n"
+            orders_text += f"   💰 Сумма: {order['total_amount']:.2f} ₽\n"
+            orders_text += f"   📦 Товаров: {order['cnt_items']} шт.\n"
+            orders_text += f"   📊 Статус: {status_emoji} {order['status']}\n\n"
+
+        # Создаем инлайн клавиатуру
+        keyboard_buttons = []
+
+        # Добавляем стандартные кнопки
+        keyboard_buttons.append([
+            InlineKeyboardButton("📞 Поддержка", url="https://t.me/alexander_dashkevich")
+        ])
+
+        keyboard_buttons.append([
+            InlineKeyboardButton("🛍️ В каталог", callback_data="show_catalog"),
+            InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")
+        ])
+
+        orders_keyboard = InlineKeyboardMarkup(keyboard_buttons)
+
+        # Отправляем сообщение
+        if query:
+            await message_obj.edit_text(
+                text=orders_text,
+                reply_markup=orders_keyboard,
+                parse_mode='HTML'
+            )
+        else:
+            await message_obj.reply_text(
+                text=orders_text,
+                reply_markup=orders_keyboard,
+                parse_mode='HTML'
+            )
+
+    except Exception as e:
+        logger.error(f"Ошибка при получении заказов: {e}")
+
+        error_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔄 Попробовать снова", callback_data="my_orders")],
+            [InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")]
+        ])
+
+        error_text = "❌ <b>Ошибка при загрузке заказов</b>\n\n"
+        error_text += "Пожалуйста, попробуйте позже."
+
+        if query:
+            await message_obj.edit_text(
+                text=error_text,
+                reply_markup=error_keyboard,
+                parse_mode='HTML'
+            )
+        else:
+            await message_obj.reply_text(
+                text=error_text,
+                reply_markup=error_keyboard,
+                parse_mode='HTML'
+            )

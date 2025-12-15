@@ -37,7 +37,10 @@ from tg_handlers import (
     cancel_checkout_callback,
     create_order_callback,
     handle_text_input,
-    show_order_confirmation
+    show_order_confirmation,
+    view_orders_callback,
+    orders_command,
+    main_menu_command
 )
 
 
@@ -77,6 +80,8 @@ def main():
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("catalog", catalog_command))
         application.add_handler(CommandHandler("backet", backet_command))
+        application.add_handler(CommandHandler("orders", orders_command))
+        application.add_handler(CommandHandler("menu", main_menu_command))
 
         application.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 
@@ -98,8 +103,7 @@ def main():
         application.add_handler(CallbackQueryHandler(back_to_confirmation_callback, pattern="^back_to_confirmation$"))
         application.add_handler(CallbackQueryHandler(cancel_checkout_callback, pattern="^cancel_checkout$"))
         application.add_handler(CallbackQueryHandler(create_order_callback, pattern="^create_order$"))
-
-        show_order_confirmation
+        application.add_handler(CallbackQueryHandler(view_orders_callback, pattern="^show_orders"))
 
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
 
