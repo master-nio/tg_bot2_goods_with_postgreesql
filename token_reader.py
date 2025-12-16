@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2025 master-nio(Dashkevich Alexander)
+
+Лицензировано под MIT License.
+См. файл LICENSE в корне проекта.
+"""
+
 import sys
 import logging
 from pathlib import Path
@@ -8,7 +15,6 @@ token_file = "tg_bot_token.data"
 
 # Настраиваем логгер для этого модуля
 logger = logging.getLogger(__name__)
-
 
 def get_token(token_file_name: str = token_file) -> str:
     try:
@@ -37,6 +43,5 @@ def get_token(token_file_name: str = token_file) -> str:
         sys.exit(1)
 
     except Exception as e:
-        # logger.exception запишет полный traceback в лог
         logger.exception(f"Непредвиденная ошибка при чтении токена")
         sys.exit(1)

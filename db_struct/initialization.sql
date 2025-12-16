@@ -232,7 +232,29 @@ CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.orders (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+alter table tgbot_vitrina2026.orders
+ALTER COLUMN telegram_user_id::bigint type BIGINT;
 
+SELECT telegram_user_id 
+FROM tgbot_vitrina2026.orders 
+WHERE NOT telegram_user_id ~ '^[0-9]+$';
+
+ALTER TABLE tgbot_vitrina2026.orders 
+ADD COLUMN telegram_user_id_temp BIGINT;
+
+UPDATE tgbot_vitrina2026.orders 
+SET telegram_user_id_temp = telegram_user_id::BIGINT;
+
+ALTER TABLE tgbot_vitrina2026.orders 
+DROP COLUMN telegram_user_id;
+
+ALTER TABLE tgbot_vitrina2026.orders 
+RENAME COLUMN telegram_user_id_temp TO telegram_user_id;
+
+ALTER TABLE cars
+ALTER COLUMN year TYPE VARCHAR(4);
+
+telegram_user_id
 
 
 COMMENT ON TABLE tgbot_vitrina2026.orders IS 'Таблица заказов пользователей';
@@ -455,3 +477,32 @@ GRANT DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
 GRANT SELECT ON tgbot_vitrina2026.products TO tgbot_reader;
 
 GRANT USAGE, SELECT ON SEQUENCE tgbot_vitrina2026.orders_id_seq TO tgbot_reader;
+
+select * from tgbot_vitrina2026.order_items i
+
+
+SELECT 
+	o.id,
+    order_number,
+    customer_name,
+    customer_email,
+    customer_phone,
+    total_amount,
+    status,
+    o.created_at,
+    (select count(1) from tgbot_vitrina2026.order_items i where o.id = i.order_number_id) cnt_items 
+FROM tgbot_vitrina2026.orders o
+WHERE o.telegram_user_id = 219299367
+ORDER BY o.created_at DESC
+LIMIT 50
+
+
+select *  
+FROM tgbot_vitrina2026.orders o
+
+update tgbot_vitrina2026.orders
+set status = 'processing'
+where id = 2
+
+
+processing

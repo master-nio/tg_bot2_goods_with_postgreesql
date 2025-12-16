@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2025 master-nio(Dashkevich Alexander)
+
+Лицензировано под MIT License.
+См. файл LICENSE в корне проекта.
+"""
+
 import logging
 import asyncpg
 import re
