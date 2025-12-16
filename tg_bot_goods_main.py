@@ -26,6 +26,7 @@ from tg_handlers import (
     start_command,
     help_command,
     catalog_command,
+    contact_command,
     catalog_callback,
     photo_handler,
     add_to_basket_callback,
@@ -85,6 +86,7 @@ def main():
         # Регистрируем команды
         application.add_handler(CommandHandler("start", start_command))
         application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("contact", contact_command))
         application.add_handler(CommandHandler("catalog", catalog_command))
         application.add_handler(CommandHandler("backet", backet_command))
         application.add_handler(CommandHandler("orders", orders_command))
