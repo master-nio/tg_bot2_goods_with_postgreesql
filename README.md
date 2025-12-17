@@ -131,4 +131,3 @@ python tg_bot_goods_main.py
 Данный бот протестирован на локальном окружении
 - PostgreSQL 16.6, compiled by Visual C++ build 1925, 64-bit
 - PyCharm 2024.3.3 (Community Edition) Build #PC-243.24978.54, built on February 13, 2025
-
