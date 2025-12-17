@@ -39,7 +39,7 @@ async def start_command(update, context):
 
     # Создаем кнопку "Каталог"
     keyboard = [
-        [InlineKeyboardButton("🗂️ Каталог", callback_data="show_catalog")]
+        [InlineKeyboardButton("🛍️ Каталог товаров", callback_data="show_catalog")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -60,19 +60,28 @@ async def contact_command(update, context):
        Основная функция для отображения контактов
        Работает как с командами, так и с callback
        """
-    message_text = f"""
-        В случае вопросов которые у вас могут возникнуть:
-        - с работой бота обратитесь к @alexander_dashkevich
-        - с вашим заказом обратитесь к @sales_manager
-        
-    По остальным вопросам можете написать к нам на почту:
-        support@mymagazine.com
-        
-    Данный раздел кастомизируется под ваши запросы.
+    contact_text = """
+    <b>📞 Как с нами связаться</b>
+
+    <u>По вопросам работы бота:</u>
+    @alexander_dashkevich
+
+    <u>По вопросам заказов:</u>  
+    @sales_manager
+
+    <u>Электронная почта:</u>
+    support@mymagazine.com
+
+    <u>Отвечаем:</u>
+    • В Telegram: 1-2 часа
+    • На почту: до 24 часов
+
+    <code>Этот раздел можно кастомизировать под ваши нужды.</code>
     """
 
     keyboard = [
-        [InlineKeyboardButton("🗂️ Каталог", callback_data="show_catalog")]
+        [InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")],
+        [InlineKeyboardButton("🛍️ Каталог товаров", callback_data="show_catalog")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -82,14 +91,14 @@ async def contact_command(update, context):
         await query.answer()
         await context.bot.send_message(
             chat_id=query.message.chat_id,
-            text=message_text,
+            text=contact_text,
             reply_markup=reply_markup,
             parse_mode="HTML"
         )
     # Обрабатываем команду
     else:
         await update.message.reply_html(
-            message_text,
+            contact_text,
             reply_markup=reply_markup
         )
 
@@ -121,7 +130,7 @@ async def about_callback(update, context):
     • <code>new</code> — новый заказ, ожидает обработки
     • <code>processing</code> — заказ взят в работу
     • <code>completed</code> — заказ выполнен и доставлен
-    • <code>codecancelled</code> — заказ отменён
+    • <code>cancelled</code> — заказ отменён
     
     <b>📁 Структура проекта</b>
     В папке <code>\db_struct</code> находятся все необходимые SQL-скрипты:
@@ -139,17 +148,30 @@ async def about_callback(update, context):
     • Интеграция платёжных систем (ЮKassa, Stripe, Crypto)
     • Админ-панель для менеджеров с управлением заказами
     • Управление загрузкой новых товаров с картинкой
+    • Кастомизация под ваш запрос
         
     <b>💡 Предложения и обратная связь</b>
     Хотите предложить улучшение или обсудить интеграцию?
+    
     Пишите: <b>@alexander_dashkevich</b>
     """
+
+    about_keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")
+        ],
+        [
+            InlineKeyboardButton("🛍️ Каталог товаров", callback_data="show_catalog"),
+            InlineKeyboardButton("📋 Мои заказы", callback_data="show_orders")
+        ]
+    ])
 
     query = update.callback_query
     await query.answer()
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=about_text,
+        reply_markup=about_keyboard,
         parse_mode="HTML"
     )
 
@@ -161,10 +183,11 @@ async def catalog_callback(update, context):
     await query.answer()  # подтверждаем нажатие, чтобы Telegram не показывал "крутящийся кружок"
     await catalog_command(update, context)
 
-async def main_menu_command(update, context):
-    query = update.callback_query
-    await query.answer()
-    await catalog_command(update, context)
+async def menu_command(update, context):
+    """Обработчик команды /menu - показывает главное меню"""
+    # Создаем фейковый update без callback_query
+    # чтобы main_menu_callback понял, что это команда
+    await main_menu_callback(update, context)
 
 async def help_command(update, context):
     """Обработчик команды /help"""
@@ -173,10 +196,12 @@ async def help_command(update, context):
 
     <b>Основные команды:</b>
     /start - Начало работы
+    /menu - Главное меню
     /help - Помощь и команды
     
     <b>Покупки:</b>
     /catalog - Каталог товаров
+    /basket - Корзина
     /orders - Мои заказы
 
     <b>Помощь:</b>
@@ -245,7 +270,7 @@ async def catalog_command(update, context):
 
 
         keyboard_add_card = [
-            [InlineKeyboardButton("➕ В корзину", callback_data=f"backet_add_{product['id']}")]
+            [InlineKeyboardButton("➕ В корзину", callback_data=f"basket_add_{product['id']}")]
         ]
         reply_markup_add_card = InlineKeyboardMarkup(keyboard_add_card)
 
@@ -297,10 +322,10 @@ async def add_to_basket_callback(update, context):
     await query.answer()  # подтверждаем нажатие, убираем «крутящийся кружок»
 
     # Получаем callback_data
-    data = query.data  # например "backet_add_5"
+    data = query.data  # например "basket_add_5"
 
     # Извлекаем ID товара
-    if data.startswith("backet_add_"):
+    if data.startswith("basket_add_"):
         product_id = int(data.split("_")[-1])
         telegram_user_id = query.from_user.id  # ID пользователя Telegram
 
@@ -369,18 +394,27 @@ async def add_to_basket_callback(update, context):
         logger.info(f"Товар {product_id} добавлен в корзину пользователя {telegram_user_id}")
 
 
-async def backet_callback(update, context):
-    """Обработчик нажатия кнопки 'Каталог'"""
-    query = update.callback_query
-    await query.answer()  # подтверждаем нажатие, чтобы Telegram не показывал "крутящийся кружок"
-    await backet_command(update, context, query)
+async def basket_callback(update, context):
+    """Обработчик нажатия кнопки 'Корзина'"""
+    await basket_command(update, context)
 
-async def backet_command(update, context, query):
-    """Обработчик команды /catalog и кнопки `Каталог` """
+async def basket_command(update, context):
+    """Обработчик команды /basket и кнопки `Корзина` """
 
-    message_obj = update.message or update.callback_query.message
+    # Определяем откуда пришел вызов
+    if update.callback_query:
+        # Из кнопки "Корзина"
+        query = update.callback_query
+        await query.answer()  # Подтверждаем нажатие
+        message_obj = query.message
+        user = query.from_user
+    else:
+        # Из команды /basket
+        query = None  # ← ВАЖНО: для команды query = None
+        message_obj = update.message
+        user = update.effective_user
 
-    telegram_user_id = query.from_user.id
+    telegram_user_id = user.id
 
     conn = await asyncpg.connect(DATABASE_URL)
     try:
@@ -422,7 +456,7 @@ async def backet_command(update, context, query):
 
             # Кнопки для пустой корзины
             keyboard = [
-                [InlineKeyboardButton("🗂️ В каталог", callback_data="show_catalog")]
+                [InlineKeyboardButton("🛍️ Каталог товаров", callback_data="show_catalog")]
             ]
         else:
             # Корзина не пуста
@@ -458,13 +492,16 @@ async def backet_command(update, context, query):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         # 4. Отправляем или обновляем сообщение
-        if query.message.text:  # Если сообщение можно редактировать
-            await message_obj.reply_html(
-                basket_text,
-                reply_markup=reply_markup
+        if update.callback_query:
+            # Если вызвано из кнопки, отправляем новое сообщение
+            await context.bot.send_message(
+                chat_id=message_obj.chat_id,
+                text=basket_text,
+                reply_markup=reply_markup,
+                parse_mode="HTML"
             )
         else:
-            # Если нельзя редактировать (например, фото), отправляем новое
+            # Если вызвано командой, используем reply_html
             await message_obj.reply_html(
                 basket_text,
                 reply_markup=reply_markup
@@ -618,7 +655,7 @@ async def checkout_order_callback(update, context):
                 InlineKeyboardButton("🗑️ Очистить корзину", callback_data="clear_basket")
             ],
             [
-                InlineKeyboardButton("📋 Вернуться в каталог", callback_data="show_catalog"),
+                InlineKeyboardButton("🛍️ Вернуться в каталог", callback_data="show_catalog"),
                 InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")
             ]
         ])
@@ -1300,61 +1337,6 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
             parse_mode='HTML'
         )
 
-async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_number: str,
-                                    customer_name: str, customer_phone: str,
-                                    total_amount: float, basket_items: list, user):
-    """Отправка уведомления менеджеру о новом заказе"""
-    try:
-        # ID чата менеджера (настройте под свои нужды)
-        MANAGER_CHAT_ID = -1001234567890  # Или другой ID
-
-        # Формируем сообщение для менеджера
-        manager_message = f"🆕 <b>НОВЫЙ ЗАКАЗ #{order_number}</b>\n\n"
-
-        manager_message += f"<b>Клиент:</b> {customer_name}\n"
-        manager_message += f"<b>Телефон:</b> {customer_phone}\n"
-
-        if user.username:
-            manager_message += f"<b>Telegram:</b> @{user.username}\n"
-        else:
-            manager_message += f"<b>Telegram ID:</b> {user.id}\n"
-
-        manager_message += f"<b>Сумма:</b> {total_amount:.2f} ₽\n\n"
-
-        manager_message += "<b>Состав заказа:</b>\n"
-        for i, item in enumerate(basket_items, 1):
-            manager_message += f"{i}. {item['product_name']} × {item['quantity']} = {item['total_price']:.2f} ₽\n"
-
-        manager_message += f"\n<b>Итого:</b> {total_amount:.2f} ₽\n\n"
-        manager_message += f"<b>Статус:</b> 🔄 <i>Новый</i>"
-
-        # Клавиатура для менеджера (если нужно быстрое действие)
-        manager_keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ Принять в работу", callback_data=f"order_accept_{order_number}"),
-                InlineKeyboardButton("📞 Позвонить", url=f"tel:{customer_phone}")
-            ],
-            [
-                InlineKeyboardButton("💬 Написать клиенту",
-                                     url=f"https://t.me/{user.username}" if user.username else f"tg://user?id={user.id}"),
-                InlineKeyboardButton("📋 Все заказы", callback_data="all_orders")
-            ]
-        ])
-
-        # Отправляем сообщение менеджеру
-        await context.bot.send_message(
-            chat_id=MANAGER_CHAT_ID,
-            text=manager_message,
-            reply_markup=manager_keyboard,
-            parse_mode='HTML'
-        )
-
-        logger.info(f"Уведомление менеджеру отправлено для заказа {order_number}")
-
-    except Exception as e:
-        logger.error(f"Ошибка при отправке уведомления менеджеру: {e}")
-
-
 async def view_orders_callback(update, context):
     query = update.callback_query
     await query.answer()  # подтверждаем нажатие, чтобы Telegram не показывал "крутящийся кружок"
@@ -1500,3 +1482,76 @@ async def orders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=error_keyboard,
                 parse_mode='HTML'
             )
+
+
+async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_number: str,
+                                    customer_name: str, customer_phone: str,
+                                    total_amount: float, basket_items: list, user):
+    """Отправка уведомления менеджеру о новом заказе"""
+    try:
+        # ID чата менеджера (настройте под свои нужды)
+
+        MANAGER_CHAT_ID = 219299367
+        # MANAGER_USERNAME = 'Irina_Dashkevich'  # Без @
+        # MANAGER_USERNAME = 'alexander_dashkevich'
+
+        # Формируем сообщение для менеджера
+        manager_message = f"🆕 <b>НОВЫЙ ЗАКАЗ #{order_number}</b>\n\n"
+
+        manager_message += f"<b>Клиент:</b> {customer_name}\n"
+        manager_message += f"<b>Телефон:</b> {customer_phone}\n"
+
+        if user.username:
+            manager_message += f"<b>Telegram:</b> @{user.username}\n"
+        else:
+            manager_message += f"<b>Telegram ID:</b> {user.id}\n"
+
+        manager_message += f"<b>Сумма:</b> {total_amount:.2f} ₽\n\n"
+
+        manager_message += "<b>Состав заказа:</b>\n"
+        for i, item in enumerate(basket_items, 1):
+            manager_message += f"{i}. {item['product_name']} × {item['quantity']} = {item['total_price']:.2f} ₽\n"
+
+        manager_message += f"\n<b>Итого:</b> {total_amount:.2f} ₽\n\n"
+        manager_message += f"<b>Статус:</b> 🔄 <i>Новый</i>"
+
+        if user.id == MANAGER_CHAT_ID:
+            manager_message += "\n\n📝 <i>Этот заказ оформлен вами как менеджером магазина.</i>"
+
+        # Клавиатура для менеджера (если нужно быстрое действие)
+        # manager_keyboard = InlineKeyboardMarkup([
+        #    [
+        #        InlineKeyboardButton("✅ Принять в работу", callback_data=f"order_accept_{order_number}"),
+        #        InlineKeyboardButton("📞 Позвонить", url=f"tel:{customer_phone}")
+        #    ],
+        #    [
+        #        InlineKeyboardButton("💬 Написать клиенту",
+        #                             url=f"https://t.me/{user.username}" if user.username else f"tg://user?id={user.id}"),
+        #        InlineKeyboardButton("📋 Все заказы", callback_data="all_orders")
+        #    ]
+        # ])
+
+        # Отправляем сообщение менеджеру
+        try:
+            logger.info(f"🔄 Попытка отправить уведомление для заказа #{order_number}. Текст сообщения\n: {manager_message}")
+
+            await context.bot.send_message(
+                chat_id=MANAGER_CHAT_ID,
+                text=manager_message,
+                parse_mode='HTML'
+            )
+
+            logger.info(f"✅ Уведомление отправлено менеджеру {MANAGER_CHAT_ID} для заказа {order_number}")
+
+        except Exception as send_error:
+            # Если не удалось отправить по username, попробуем найти ID
+            logger.warning(f"Не удалось отправить по username {MANAGER_CHAT_ID}, ошибка: {send_error}")
+
+            # Можно добавить fallback на email или другой канал
+            logger.info(f"Заказ #{order_number} для {customer_name}. Сумма: {total_amount}₽")
+
+            # Или попробовать отправить сообщение через другую логику
+            raise send_error  # Пробрасываем ошибку дальше
+
+    except Exception as e:
+        logger.error(f"Ошибка при отправке уведомления менеджеру: {e}")

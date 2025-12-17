@@ -30,8 +30,8 @@ from tg_handlers import (
     catalog_callback,
     photo_handler,
     add_to_basket_callback,
-    backet_command,
-    backet_callback,
+    basket_command,
+    basket_callback,
     clear_basket_callback,
     checkout_order_callback,
     main_menu_callback,
@@ -48,7 +48,7 @@ from tg_handlers import (
     show_order_confirmation,
     view_orders_callback,
     orders_command,
-    main_menu_command,
+    menu_command,
     contacts_callback,
     help_callback,
     about_callback
@@ -90,17 +90,17 @@ def main():
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("contact", contact_command))
         application.add_handler(CommandHandler("catalog", catalog_command))
-        application.add_handler(CommandHandler("backet", backet_command))
+        application.add_handler(CommandHandler("basket", basket_command))
         application.add_handler(CommandHandler("orders", orders_command))
-        application.add_handler(CommandHandler("menu", main_menu_command))
+        application.add_handler(CommandHandler("menu", menu_command))
 
         # Обработчики загрузки фото для получения CDN telegram_file_id
         application.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 
         application.add_handler(CallbackQueryHandler(catalog_callback, pattern="show_catalog"))
-        # регулярное выражение, чтобы обработчик реагировал только на кнопки с backet_add_ и числом.
-        application.add_handler(CallbackQueryHandler(add_to_basket_callback, pattern=r"^backet_add_\d+$"))
-        application.add_handler(CallbackQueryHandler(backet_callback, pattern="show_basket"))
+        # регулярное выражение, чтобы обработчик реагировал только на кнопки с basket_add_ и числом.
+        application.add_handler(CallbackQueryHandler(add_to_basket_callback, pattern=r"^basket_add_\d+$"))
+        application.add_handler(CallbackQueryHandler(basket_callback, pattern="show_basket"))
         application.add_handler(CallbackQueryHandler(clear_basket_callback, pattern="clear_basket"))
         application.add_handler(CallbackQueryHandler(checkout_order_callback, pattern="checkout_order"))
         application.add_handler(CallbackQueryHandler(main_menu_callback, pattern="main_menu"))
