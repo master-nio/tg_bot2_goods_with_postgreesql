@@ -22,7 +22,7 @@
 
 ```bash
 git clone https://github.com/master-nio/tg_bot2_goods_with_postgreesql.git
-cd telegram-shop-bot
+cd tg_bot2_goods_with_postgreesql
 ```
 
 2. Установите зависимости: см. файлы скриптов tg_bot_goods_main.py, tg_handlers.py, token_reader.py. Рекомендация сделать через venv. 
@@ -33,6 +33,7 @@ TODO pip install -r requirements.txt
 
 3. Настройте переменные окружения:
 TODO Создайте файл .env и добавьте в него:
+см. раздел "Настройки бота"
 
 ## Настройки бота
 1. Для работы бота создайте нового через BotFather. 
