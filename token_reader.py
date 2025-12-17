@@ -1,5 +1,5 @@
 """
-Copyright (c) 2025 master-nio(Dashkevich Alexander)
+Copyright (c) 2025 Dashkevich Alexander
 
 Лицензировано под MIT License.
 См. файл LICENSE в корне проекта.

@@ -1,5 +1,5 @@
 """
-Copyright (c) 2025 master-nio(Dashkevich Alexander)
+Copyright (c) 2025 Dashkevich Alexander
 
 Лицензировано под MIT License.
 См. файл LICENSE в корне проекта.
@@ -11,6 +11,9 @@ import re
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import ContextTypes
+
+# Подключение к БД (можно вынести в отдельную функцию или пул)
+DATABASE_URL = "postgresql://tgbot_reader:sdf$&^$oiydfSzQ@localhost:5432/tg_shops"
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +51,22 @@ async def start_command(update, context):
 
     logger.info(f"Новый пользователь: {user.id} (@{user.username})")
 
+async def contacts_callback(update, context):
+    """Обработчик нажатия кнопки 'Контакты'"""
+    await contact_command(update, context)
 
 async def contact_command(update, context):
-
+    """
+       Основная функция для отображения контактов
+       Работает как с командами, так и с callback
+       """
     message_text = f"""
         В случае вопросов которые у вас могут возникнуть:
         - с работой бота обратитесь к @alexander_dashkevich
         - с вашим заказом обратитесь к @sales_manager
         
     По остальным вопросам можете написать к нам на почту:
-        pochta@mycontact.com
+        support@mymagazine.com
         
     Данный раздел кастомизируется под ваши запросы.
     """
@@ -67,9 +76,81 @@ async def contact_command(update, context):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_html(
-        message_text,
-        reply_markup=reply_markup
+    # Обрабатываем callback
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=message_text,
+            reply_markup=reply_markup,
+            parse_mode="HTML"
+        )
+    # Обрабатываем команду
+    else:
+        await update.message.reply_html(
+            message_text,
+            reply_markup=reply_markup
+        )
+
+async def about_callback(update, context):
+    """
+        Отображение информации "О магазине"
+    """
+
+    about_text = f"""
+    <b>🎯 О нашем магазине</b>
+    
+    Этот интернет-магазин работает внутри Telegram-бота, объединяя удобство мессенджера с функционалом полноценной торговой платформы. Мы создали быстрый и интуитивно понятный способ покупать товары, не покидая Telegram.
+    
+    <b>🛠️ Технологии и архитектура</b>
+    • <b>Backend</b>: Telegram-бот на Python (Aiogram)
+    • <b>База данных</b>: PostgreSQL для надёжного хранения товаров и заказов
+    • <b>Контент</b>: Изображения товаров загружаются в Telegram CDN, а описания и метаданные управляются через БД
+    
+    <b>🎄 Товарный каталог (демо-версия)</b>
+    Для демонстрации в преддверии 2026 года в каталоге представлены три новогодние ёлки. Рекомендуем загружать не более 10 товаров — этого достаточно для старта и тестирования полного цикла продаж.
+    
+    <b>📦 Как работает заказ</b>
+    1. <b>Оформление</b>: Пользователь выбирает товары в корзине и заполняет контактные данные.
+    2. <b>Фиксация</b>: Заказ автоматически создаётся в БД со статусом <code>new</code>.
+    3. <b>Уведомление</b>: Менеджер получает оповещение в Telegram о новом заказе.
+    4. <b>Отслеживание</b>: Покупатель может в любой момент проверить статус своего заказа через команду /orders.
+    
+    <b>🔄 Статусы заказа</b>
+    • <code>new</code> — новый заказ, ожидает обработки
+    • <code>processing</code> — заказ взят в работу
+    • <code>completed</code> — заказ выполнен и доставлен
+    • <code>codecancelled</code> — заказ отменён
+    
+    <b>📁 Структура проекта</b>
+    В папке <code>\db_struct</code> находятся все необходимые SQL-скрипты:
+    • Создание таблиц и связей
+    • Функция для оформления заказов
+    • Примеры запросов для администрирования и настройки
+    • Бот подключается к БД через пользователя tgbot_reader
+    • Назначение прав к таблицам, функциям для tgbot_reader
+    
+    
+    <b>🚀 Планы развития</b>
+    Мы открыты к улучшениям и сотрудничеству! 
+    
+    В дорожной карте:
+    • Интеграция платёжных систем (ЮKassa, Stripe, Crypto)
+    • Админ-панель для менеджеров с управлением заказами
+    • Управление загрузкой новых товаров с картинкой
+        
+    <b>💡 Предложения и обратная связь</b>
+    Хотите предложить улучшение или обсудить интеграцию?
+    Пишите: <b>@alexander_dashkevich</b>
+    """
+
+    query = update.callback_query
+    await query.answer()
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=about_text,
+        parse_mode="HTML"
     )
 
 
@@ -102,11 +183,28 @@ async def help_command(update, context):
     /contact - Контакты поддержки магазина
     """
 
-    await update.message.reply_html(help_text)
+    # Обрабатываем callback (если пришло из кнопки)
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()  # Подтверждаем нажатие
+        # Убираем "часики" (опционально)
+        # await query.delete_message()
+
+        # Отправляем новое сообщение с помощью
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=help_text,
+            parse_mode="HTML"
+        )
+    # Обрабатываем команду (если пришло /help)
+    else:
+        await update.message.reply_html(help_text)
 
 
-# Подключение к БД (можно вынести в отдельную функцию или пул)
-DATABASE_URL = "postgresql://tgbot_reader:sdf$&^$oiydfSzQ@localhost:5432/tg_shops"
+async def help_callback(update, context):
+    """Обработчик нажатия кнопки 'Помощь'"""
+    await help_command(update, context)
+
 
 async def catalog_command(update, context):
     """Обработчик команды /catalog и кнопки `Каталог` """
@@ -451,7 +549,7 @@ async def checkout_order_callback(update, context):
                 [InlineKeyboardButton("🛒 Перейти в каталог", callback_data="show_catalog")]
             ])
 
-            await message_obj.edit_text(
+            await message_obj.reply_text(
                 text="🛒 <b>Корзина пуста!</b>\n\n"
                      "Чтобы оформить заказ, сначала добавьте товары из каталога.",
                 reply_markup=empty_keyboard,
@@ -525,7 +623,7 @@ async def checkout_order_callback(update, context):
             ]
         ])
 
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text=basket_text,
             reply_markup=actions_keyboard,
             parse_mode='HTML'
@@ -545,13 +643,12 @@ async def checkout_order_callback(update, context):
             [InlineKeyboardButton("️🏠 В главное меню", callback_data="main_menu")]
         ])
 
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text="❌ <b>Произошла ошибка при загрузке корзины</b>\n\n"
                  "Пожалуйста, попробуйте позже или обратитесь в поддержку.",
             reply_markup=error_keyboard,
             parse_mode='HTML'
         )
-
 
 async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик главного меню"""
@@ -562,7 +659,7 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         message_obj = query.message
         user = query.from_user
     else:
-        # Если вызывается из команды /start
+        # Если вызывается из команды /menu
         message_obj = update.message
         user = update.effective_user
 
@@ -595,7 +692,7 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         # Проверяем откуда вызывается меню
         if query:
-            await message_obj.edit_text(
+            await message_obj.reply_text(
                 text=welcome_text,
                 reply_markup=main_menu_keyboard,
                 parse_mode='HTML'
@@ -626,7 +723,7 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         ])
 
         if query:
-            await message_obj.edit_text(
+            await message_obj.reply_text(
                 text="👋 Добро пожаловать!\n\nЧто вас интересует?",
                 reply_markup=fallback_keyboard
             )
@@ -635,7 +732,6 @@ async def main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 text="👋 Добро пожаловать!\n\nЧто вас интересует?",
                 reply_markup=fallback_keyboard
             )
-
 
 async def confirm_checkout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Подтверждение оформления - начинаем сбор данных с имени"""
@@ -646,7 +742,7 @@ async def confirm_checkout_callback(update: Update, context: ContextTypes.DEFAUL
 
     # Проверяем, что данные корзины сохранены
     if 'basket_items' not in context.user_data:
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text="⚠️ <b>Данные корзины не найдены</b>\n\n"
                  "Пожалуйста, начните оформление заказа заново.",
             parse_mode='HTML'
@@ -661,14 +757,13 @@ async def confirm_checkout_callback(update: Update, context: ContextTypes.DEFAUL
         [InlineKeyboardButton("🚫 Отменить оформление", callback_data="cancel_checkout")]
     ])
 
-    await message_obj.edit_text(
+    await message_obj.reply_text(
         text=f"✅ <b>Начинаем оформление заказа!</b>\n"
              f"<b>Шаг 1 из 3:</b> Введите ваше <b>Имя и Фамилию</b>\n"
              f"<i>Пример: Иван Иванов</i>",
         reply_markup=cancel_keyboard,
         parse_mode='HTML'
     )
-
 
 async def handle_name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик ввода имени"""
@@ -891,7 +986,7 @@ async def show_order_confirmation(update: Update, context: ContextTypes.DEFAULT_
     ])
 
     if is_callback:
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text=confirmation_text,
             reply_markup=confirmation_keyboard,
             parse_mode='HTML'
@@ -920,7 +1015,7 @@ async def edit_order_data_callback(update: Update, context: ContextTypes.DEFAULT
         [InlineKeyboardButton("🔙 Назад к подтверждению", callback_data="back_to_confirmation")]
     ])
 
-    await message_obj.edit_text(
+    await message_obj.reply_text(
         text="📝 <b>Что вы хотите изменить?</b>\n\n"
              "Выберите, какие данные нужно исправить:",
         reply_markup=edit_keyboard,
@@ -941,7 +1036,7 @@ async def edit_name_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         [InlineKeyboardButton("🔙 Назад", callback_data="back_to_confirmation")]
     ])
 
-    await message_obj.edit_text(
+    await message_obj.reply_text(
         text="✏️ <b>Введите новое имя:</b>\n"
              "<i>Пример: Иван Иванов</i>",
         reply_markup=cancel_keyboard,
@@ -962,7 +1057,7 @@ async def edit_phone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("🔙 Назад", callback_data="back_to_confirmation")]
     ])
 
-    await message_obj.edit_text(
+    await message_obj.reply_text(
         text="✏️ <b>Введите новый номер телефона:</b>\n"
              "<i>Пример: +79161234567 или 89161234567</i>",
         reply_markup=cancel_keyboard,
@@ -983,7 +1078,7 @@ async def edit_email_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("🔙 Назад", callback_data="back_to_confirmation")]
     ])
 
-    await message_obj.edit_text(
+    await message_obj.reply_text(
         text="✏️ <b>Введите новый email:</b>\n"
              "<i>Пример: ivan@example.com</i>\n\n"
              "<i>Или отправьте 'пропустить', чтобы не указывать email</i>",
@@ -1062,7 +1157,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
                 [InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")]
             ])
 
-            await message_obj.edit_text(
+            await message_obj.reply_text(
                 text="❌ <b>Ошибка оформления заказа</b>\n\n"
                      "Не все данные были сохранены. Пожалуйста, начните оформление заказа заново.",
                 reply_markup=error_keyboard,
@@ -1151,7 +1246,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
             ]
         ])
 
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text=order_details,
             reply_markup=success_keyboard,
             parse_mode='HTML'
@@ -1181,7 +1276,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")]
         ])
 
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text="❌ <b>Ошибка при создании заказа</b>\n\n"
                  "Произошла ошибка при обработке заказа. Пожалуйста, попробуйте еще раз.\n\n"
                  "<i>Если ошибка повторяется, свяжитесь с поддержкой.</i>",
@@ -1198,7 +1293,7 @@ async def create_order_callback(update: Update, context: ContextTypes.DEFAULT_TY
             [InlineKeyboardButton("🏠 В главное меню", callback_data="main_menu")]
         ])
 
-        await message_obj.edit_text(
+        await message_obj.reply_text(
             text="❌ <b>Не удалось создать заказ</b>\n\n"
                  "Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже или свяжитесь с поддержкой.",
             reply_markup=error_keyboard,
@@ -1318,7 +1413,7 @@ async def orders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"<i>Посмотрите наш каталог товаров!</i>"
 
             if query:
-                await message_obj.edit_text(
+                await message_obj.reply_text(
                     text=text,
                     reply_markup=no_orders_keyboard,
                     parse_mode='HTML'
@@ -1370,7 +1465,7 @@ async def orders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Отправляем сообщение
         if query:
-            await message_obj.edit_text(
+            await message_obj.reply_text(
                 text=orders_text,
                 reply_markup=orders_keyboard,
                 parse_mode='HTML'
@@ -1394,7 +1489,7 @@ async def orders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         error_text += "Пожалуйста, попробуйте позже."
 
         if query:
-            await message_obj.edit_text(
+            await message_obj.reply_text(
                 text=error_text,
                 reply_markup=error_keyboard,
                 parse_mode='HTML'

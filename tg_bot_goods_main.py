@@ -1,5 +1,5 @@
 """
-Copyright (c) 2025 master-nio(Dashkevich Alexander)
+Copyright (c) 2025 Dashkevich Alexander
 
 Лицензировано под MIT License.
 См. файл LICENSE в корне проекта.
@@ -48,9 +48,11 @@ from tg_handlers import (
     show_order_confirmation,
     view_orders_callback,
     orders_command,
-    main_menu_command
+    main_menu_command,
+    contacts_callback,
+    help_callback,
+    about_callback
 )
-
 
 def main():
     """Основная асинхронная функция бота."""
@@ -92,6 +94,7 @@ def main():
         application.add_handler(CommandHandler("orders", orders_command))
         application.add_handler(CommandHandler("menu", main_menu_command))
 
+        # Обработчики загрузки фото для получения CDN telegram_file_id
         application.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 
         application.add_handler(CallbackQueryHandler(catalog_callback, pattern="show_catalog"))
@@ -113,8 +116,12 @@ def main():
         application.add_handler(CallbackQueryHandler(cancel_checkout_callback, pattern="^cancel_checkout$"))
         application.add_handler(CallbackQueryHandler(create_order_callback, pattern="^create_order$"))
         application.add_handler(CallbackQueryHandler(view_orders_callback, pattern="^show_orders"))
-
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
+        application.add_handler(CallbackQueryHandler(contacts_callback, pattern='^contacts$'))
+        application.add_handler(CallbackQueryHandler(help_callback, pattern='^help$'))
+        application.add_handler(CallbackQueryHandler(about_callback, pattern='^about'))
+
+
 
         logger.info(f"Зарегистрировано команд: {len(application.handlers[0])}")
 
