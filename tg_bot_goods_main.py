@@ -121,8 +121,6 @@ def main():
         application.add_handler(CallbackQueryHandler(help_callback, pattern='^help$'))
         application.add_handler(CallbackQueryHandler(about_callback, pattern='^about'))
 
-
-
         logger.info(f"Зарегистрировано команд: {len(application.handlers[0])}")
 
 

@@ -13,6 +13,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMe
 from telegram.ext import ContextTypes
 
 # Подключение к БД (можно вынести в отдельную функцию или пул)
+# DATABASE_URL=postgresql://user:password@localhost/dbname
 DATABASE_URL = "postgresql://tgbot_reader:sdf$&^$oiydfSzQ@localhost:5432/tg_shops"
 
 logger = logging.getLogger(__name__)
@@ -1483,7 +1484,6 @@ async def orders_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode='HTML'
             )
 
-
 async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_number: str,
                                     customer_name: str, customer_phone: str,
                                     total_amount: float, basket_items: list, user):
@@ -1492,7 +1492,6 @@ async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_nu
         # ID чата менеджера (настройте под свои нужды)
 
         MANAGER_CHAT_ID = 219299367
-        # MANAGER_USERNAME = 'Irina_Dashkevich'  # Без @
         # MANAGER_USERNAME = 'alexander_dashkevich'
 
         # Формируем сообщение для менеджера
@@ -1533,7 +1532,8 @@ async def send_manager_notification(context: ContextTypes.DEFAULT_TYPE, order_nu
 
         # Отправляем сообщение менеджеру
         try:
-            logger.info(f"🔄 Попытка отправить уведомление для заказа #{order_number}. Текст сообщения\n: {manager_message}")
+            #DEBUG
+            #logger.info(f"🔄 Попытка отправить уведомление для заказа #{order_number}. Текст сообщения\n: {manager_message}")
 
             await context.bot.send_message(
                 chat_id=MANAGER_CHAT_ID,
