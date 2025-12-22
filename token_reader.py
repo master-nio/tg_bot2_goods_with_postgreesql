@@ -10,18 +10,20 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-#файл с токеном должен находится в той же папке, что и скрипт.py чтения токена
+# файл с токеном должен находится в той же папке, что и скрипт.py чтения токена
 token_file = "tg_bot_token.data"
 
 # Настраиваем логгер для этого модуля
 logger = logging.getLogger(__name__)
+
 
 def get_token(token_file_name: str = token_file) -> str:
     try:
         token_path = Path(token_file_name)
         if not token_path.exists():
             logger.critical(f"   ОШИБКА: Файл с токеном не найден: {token_path}")
-            logger.critical(f"   Создайте файл '{token_file_name}' и поместите в него токен бота созданный при помощи botFather")
+            logger.critical(
+                f"   Создайте файл '{token_file_name}' и поместите в него токен бота созданный при помощи botFather")
             sys.exit(1)
 
         with open(token_path, 'r', encoding='utf-8') as file:
