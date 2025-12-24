@@ -4,12 +4,11 @@ create database tg_shops;
 
 CREATE SCHEMA tgbot_vitrina2026 AUTHORIZATION postgres;
 
-
-drop table tgbot_vitrina2026.products;
-drop table tgbot_vitrina2026.product_photos;
-drop table tgbot_vitrina2026.user_basket;
 drop table tgbot_vitrina2026.order_items;
 drop table tgbot_vitrina2026.orders;
+drop table tgbot_vitrina2026.user_basket;
+drop table tgbot_vitrina2026.product_photos;
+drop table tgbot_vitrina2026.products;
 
 select * from tgbot_vitrina2026.products;
 select * from tgbot_vitrina2026.product_photos;
@@ -33,10 +32,6 @@ CREATE TABLE tgbot_vitrina2026.products (
     deleted_at      TIMESTAMP,
     sort INT NOT NULL DEFAULT 0
 );
-
-view tables in postgresql
-\dt tgbot_vitrina2026.*
-
 
 
 CREATE OR REPLACE FUNCTION tgbot_vitrina2026.update_timestamp()
@@ -76,33 +71,7 @@ VALUES
     2999.00
 );
 
-delete from tgbot_vitrina2026.products;
-
-select * from tgbot_vitrina2026.products
-where name like '%\n%';
-
-UPDATE tgbot_vitrina2026.products
-SET description = REPLACE(description, '<br>', E'\n')
-WHERE description LIKE '%<br>%';
-
-update tgbot_vitrina2026.products
-set price = trunc(price);
-
-update tgbot_vitrina2026.products
-set name = '<b>' || name || '</b>';
-
-
-update tgbot_vitrina2026.products
-SET description = REPLACE(description, '<b>', '')
-WHERE description LIKE '%<b>%';
-
-update tgbot_vitrina2026.products
-SET description = REPLACE(description, '</b>', '')
-WHERE description LIKE '%</b>%';
-
-update tgbot_vitrina2026.products
-SET description = REPLACE(description, '  ', ' ')
-WHERE description LIKE '%  %';
+-- delete from tgbot_vitrina2026.products;
 
 SELECT 
 	p.id, 
@@ -130,7 +99,6 @@ CREATE TABLE tgbot_vitrina2026.product_photos (
     created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-
 /*
 Через функцию загрузки фото в Боте получаем telegram_file_id
 
@@ -151,35 +119,10 @@ insert into product_photos(product_id,telegram_file_id,sort_order) values
 (3,'AgACAgIAAxkBAAMRaTwMi24gwJbabWB3G9jUnYcwgDwAAqIQaxvUZ-FJI1E5dAjyUZYBAAMCAAN5AAM2BA',0);
 
 
-select * from  product_photos
-
+select * from product_photos;
 
 --Создаем пользователя
-CREATE USER tgbot_reader WITH PASSWORD 'sZdf$&^$oiydfSzQ7';
-
-
--- Эта роль может быть использована для чтения любых таблиц в схеме tgbot_vitrina2026
-GRANT CONNECT ON DATABASE tg_shops TO tgbot_reader;
-GRANT USAGE ON SCHEMA tgbot_vitrina2026 TO tgbot_reader;
-GRANT SELECT ON ALL TABLES IN SCHEMA tgbot_vitrina2026 TO tgbot_reader;
-
---у меня на локали пользователь postgres админ
-ALTER SCHEMA tgbot_vitrina2026 OWNER TO postgres;
-
--- Добавим новые  таблицы для пользователя tgbot_reader, чтобы он их мог читать, если вдруг что-то новое создадим под postgres
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres
-IN SCHEMA tgbot_vitrina2026
-GRANT SELECT ON TABLES TO tgbot_reader;
-
-
---Убираем права у tgbot_reader на чтение схемы public
-REVOKE ALL ON SCHEMA public FROM tgbot_reader;
-REVOKE ALL ON ALL TABLES IN SCHEMA public FROM tgbot_reader;
-
-GRANT USAGE ON SCHEMA tgbot_vitrina2026 TO tgbot_reader;
--- Даем права SELECT на все существующие таблицы
-GRANT SELECT ON ALL TABLES IN SCHEMA tgbot_vitrina2026 TO tgbot_reader;
-
+CREATE USER tgbot_reader WITH PASSWORD 'Пароль к пользователю';
 
 -- Продолжаем создавать таблицы. Теперь Корзина
 CREATE TABLE tgbot_vitrina2026.user_basket (
@@ -188,26 +131,11 @@ CREATE TABLE tgbot_vitrina2026.user_basket (
     product_id      INT NOT NULL REFERENCES tgbot_vitrina2026.products(id) ON DELETE CASCADE,  -- товар
     quantity        INT NOT NULL DEFAULT 1,   -- количество единиц товара
     added_at        TIMESTAMP NOT NULL DEFAULT NOW(),  -- дата и время добавления
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     UNIQUE(telegram_user_id, product_id)      -- чтобы один и тот же товар не дублировался для одного пользователя
 );
 
-
-alter table tgbot_vitrina2026.user_basket
-add column updated_at TIMESTAMP NOT NULL DEFAULT NOW();
-
---дадим пользователю tgbot_reader возможность работать с корзиной
-GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
-
-
-GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.user_basket_id_seq TO tgbot_reader;
-GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
-
-GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.order_items_id_seq TO tgbot_reader;
-GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.order_items TO tgbot_reader;
-
-GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.orders TO tgbot_reader;
-GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.order_number_seq TO tgbot_reader;
-
+select * from tgbot_vitrina2026.user_basket;
 
 
 select  
@@ -219,7 +147,7 @@ select
 	p.price * b.quantity as sum_position
 from tgbot_vitrina2026.user_basket b
 join tgbot_vitrina2026.products p on p.id = b.product_id
-where telegram_user_id = '219299367'
+where telegram_user_id = 'Ваш телеграм ID'
 
 
 select  
@@ -228,20 +156,20 @@ select
 	COALESCE(SUM(p.price * b.quantity), 0) as sum_position
 from tgbot_vitrina2026.user_basket b
 join tgbot_vitrina2026.products p on p.id = b.product_id
-where telegram_user_id = '219299367'
+where telegram_user_id = 'Ваш телеграм ID'
 
 SELECT  
-                                COUNT(product_id) as cnt_products,
-                                COALESCE(SUM(quantity), 0) as qty_products,
-                                COALESCE(SUM(p.price * b.quantity),0) as sum_position
-                            FROM tgbot_vitrina2026.user_basket b
-                            JOIN tgbot_vitrina2026.products p ON p.id = b.product_id
-                            WHERE telegram_user_id  = '219299367'
+    COUNT(product_id) as cnt_products,
+    COALESCE(SUM(quantity), 0) as qty_products,
+    COALESCE(SUM(p.price * b.quantity),0) as sum_position
+FROM tgbot_vitrina2026.user_basket b
+JOIN tgbot_vitrina2026.products p ON p.id = b.product_id
+WHERE telegram_user_id  = 'Ваш телеграм ID'
                             
                             
 DELETE 
 FROM tgbot_vitrina2026.user_basket
-WHERE telegram_user_id  = '219299367'
+WHERE telegram_user_id  = 'Ваш телеграм ID'
 
 
 select * from user_basket
@@ -261,33 +189,7 @@ CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.orders (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-alter table tgbot_vitrina2026.orders
-ALTER COLUMN telegram_user_id type BIGINT;
-
-ALTER TABLE tgbot_vitrina2026.orders
-ALTER COLUMN telegram_user_id TYPE BIGINT USING telegram_user_id::bigint;
-
-SELECT telegram_user_id 
-FROM tgbot_vitrina2026.orders 
-WHERE NOT telegram_user_id ~ '^[0-9]+$';
-
-ALTER TABLE tgbot_vitrina2026.orders 
-ADD COLUMN telegram_user_id_temp BIGINT;
-
-UPDATE tgbot_vitrina2026.orders 
-SET telegram_user_id_temp = telegram_user_id::BIGINT;
-
-ALTER TABLE tgbot_vitrina2026.orders 
-DROP COLUMN telegram_user_id;
-
-ALTER TABLE tgbot_vitrina2026.orders 
-RENAME COLUMN telegram_user_id_temp TO telegram_user_id;
-
-ALTER TABLE cars
-ALTER COLUMN year TYPE VARCHAR(4);
-
-telegram_user_id
-
+select * from orders;
 
 COMMENT ON TABLE tgbot_vitrina2026.orders IS 'Таблица заказов пользователей';
 COMMENT ON COLUMN tgbot_vitrina2026.orders.order_number IS 'Уникальный номер заказа';
@@ -305,11 +207,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_telegram_user
     
 CREATE INDEX IF NOT EXISTS idx_orders_status 
     ON tgbot_vitrina2026.orders(status);
-    
-CREATE INDEX IF NOT EXISTS idx_orders_created 
-    ON tgbot_vitrina2026.orders(created_at);
-    
-
+   
 -- Создаем последовательность для номеров заказов
 CREATE SEQUENCE IF NOT EXISTS tgbot_vitrina2026.order_number_seq
     START WITH 1000
@@ -328,6 +226,7 @@ AND sequence_name = 'order_number_seq';
 
 -- Сбросить на 1000 (или другое значение)
 ALTER SEQUENCE tgbot_vitrina2026.order_number_seq RESTART WITH 1000;
+
 
 -- Функция для генерации номера заказа
 CREATE OR REPLACE FUNCTION tgbot_vitrina2026.generate_order_number()
@@ -359,9 +258,6 @@ CREATE TRIGGER update_orders_updated_at
 
 select generate_order_number()
 
-
-
-
 CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.order_items (
     id SERIAL PRIMARY KEY,
     order_number_id INT NOT NULL REFERENCES tgbot_vitrina2026.orders(id) ON DELETE CASCADE,  -- id заказа
@@ -371,7 +267,6 @@ CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.order_items (
     price_at_order NUMERIC(10,2) CHECK (price_at_order >= 0),
 	subtotal DECIMAL(10, 2) GENERATED ALWAYS AS (price_at_order * quantity) STORED,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
     CONSTRAINT unique_order_product UNIQUE (order_number_id, product_id)
 );
 
@@ -393,7 +288,6 @@ CREATE INDEX IF NOT EXISTS idx_order_items_product
     ON tgbot_vitrina2026.order_items(product_id);
 
 select * from order_items
-
 
 DROP FUNCTION tgbot_vitrina2026.create_order_from_basket;
 CREATE OR REPLACE FUNCTION tgbot_vitrina2026.create_order_from_basket(
@@ -481,34 +375,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-select * from orders
+select * from orders;
 
 SELECT schemaname, sequencename 
 FROM pg_sequences 
 WHERE sequencename = 'order_number_seq';
 
-GRANT USAGE, SELECT ON SEQUENCE tgbot_vitrina2026.order_number_seq to tgbot_reader;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA tgbot_vitrina2026 TO tgbot_reader;
-
-SELECT 
-    proname,
-    proargtypes,
-    prosecdef,
-    provolatile,
-    pronargs,
-    prorettype,
-    proacl
-FROM pg_proc 
-WHERE proname = 'create_order_from_basket'
-AND pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'tgbot_vitrina2026');
-
-GRANT USAGE ON SCHEMA tgbot_vitrina2026 TO tgbot_reader;
-GRANT INSERT, SELECT, UPDATE ON tgbot_vitrina2026.orders TO tgbot_reader;
-GRANT INSERT, SELECT ON tgbot_vitrina2026.order_items TO tgbot_reader;
-GRANT DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
-GRANT SELECT ON tgbot_vitrina2026.products TO tgbot_reader;
-
-GRANT USAGE, SELECT ON SEQUENCE tgbot_vitrina2026.orders_id_seq TO tgbot_reader;
 
 select * from tgbot_vitrina2026.order_items i
 
@@ -524,7 +396,7 @@ SELECT
     o.created_at,
     (select count(1) from tgbot_vitrina2026.order_items i where o.id = i.order_number_id) cnt_items 
 FROM tgbot_vitrina2026.orders o
-WHERE o.telegram_user_id = 219299367
+WHERE o.telegram_user_id = Ваш телеграм ID
 ORDER BY o.created_at DESC
 LIMIT 50
 
@@ -536,5 +408,42 @@ update tgbot_vitrina2026.orders
 set status = 'processing'
 where id = 2
 
-
 processing
+
+
+-----
+-- Права для пользователя tgbot_reader
+
+--Убираем права у tgbot_reader на чтение схемы public
+REVOKE ALL ON SCHEMA public FROM tgbot_reader;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM tgbot_reader;
+
+GRANT CONNECT ON DATABASE tg_shops TO tgbot_reader;
+GRANT USAGE ON SCHEMA tgbot_vitrina2026 TO tgbot_reader;
+
+-- Показать каталог
+GRANT SELECT ON tgbot_vitrina2026.products TO tgbot_reader;
+GRANT SELECT ON tgbot_vitrina2026.product_photos TO tgbot_reader;
+
+-- Права на корзину
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.user_basket TO tgbot_reader;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.user_basket_id_seq TO tgbot_reader;
+
+-- Права на запуск функций
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA tgbot_vitrina2026 TO tgbot_reader;
+
+-- order_items_id_seq
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.order_items_id_seq TO tgbot_reader;
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.order_items TO tgbot_reader;
+
+-- orders
+GRANT INSERT, UPDATE, DELETE, SELECT ON tgbot_vitrina2026.orders TO tgbot_reader;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.orders_id_seq TO tgbot_reader;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE tgbot_vitrina2026.order_number_seq TO tgbot_reader;
+
+
+USAGE → разрешает использовать последовательность
+SELECT → читать текущее значение
+UPDATE → получать nextval()
+
+
