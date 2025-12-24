@@ -5,6 +5,18 @@ create database tg_shops;
 CREATE SCHEMA tgbot_vitrina2026 AUTHORIZATION postgres;
 
 
+drop table tgbot_vitrina2026.products;
+drop table tgbot_vitrina2026.product_photos;
+drop table tgbot_vitrina2026.user_basket;
+drop table tgbot_vitrina2026.order_items;
+drop table tgbot_vitrina2026.orders;
+
+select * from tgbot_vitrina2026.products;
+select * from tgbot_vitrina2026.product_photos;
+select * from tgbot_vitrina2026.user_basket;
+select * from tgbot_vitrina2026.order_items;
+select * from tgbot_vitrina2026.orders;
+
 
 CREATE TABLE tgbot_vitrina2026.products (
     id              SERIAL PRIMARY KEY,
@@ -25,8 +37,7 @@ CREATE TABLE tgbot_vitrina2026.products (
 view tables in postgresql
 \dt tgbot_vitrina2026.*
 
-alter table tgbot_vitrina2026.products 
-add column sort INT NOT NULL DEFAULT 0;
+
 
 CREATE OR REPLACE FUNCTION tgbot_vitrina2026.update_timestamp()
 RETURNS TRIGGER AS $$
@@ -44,26 +55,31 @@ EXECUTE FUNCTION tgbot_vitrina2026.update_timestamp();
 INSERT INTO tgbot_vitrina2026.products (name, description, price)
 VALUES
 (
-    'Новогодняя ёлка Premium',
-    '<b>Премиальная искусственная ёлка</b>\n
-     Пышная, высокая и максимально приближенная к настоящей.\n
+    '<b>Новогодняя ёлка Premium</b>',
+    '     Премиальная искусственная ёлка.
+     Пышная, высокая и максимально приближенная к настоящей.
      Идеально впишется в интерьер и создаст волшебную праздничную атмосферу.',
-    9999.99
+    9999.00
 ),
 (
-    'Новогодняя ёлка Standart',
-    '<b>Классическая новогодняя ёлка</b>\n
-     Умеренная плотность веток, аккуратная форма и стильный внешний вид.\n
+    '<b>Новогодняя ёлка Standart</b>',
+    '     Классическая новогодняя ёлка.
+     Умеренная плотность веток, аккуратная форма и стильный внешний вид.
      Отличный выбор для квартиры или небольшого офиса.',
-    5999.99
+    5999.00
 ),
 (
-    'Новогодняя ёлка Easy',
-    '<b>Компактная и удобная ёлка</b>\n
-     Лёгкая, быстро собирается, не занимает много места.\n
+    '<b>Новогодняя ёлка Easy</b>',
+    '     Компактная и удобная ёлка.
+     Лёгкая, быстро собирается, не занимает много места.
      Подойдёт для стола, тумбы или небольшого пространства.',
-    2999.99
+    2999.00
 );
+
+delete from tgbot_vitrina2026.products;
+
+select * from tgbot_vitrina2026.products
+where name like '%\n%';
 
 UPDATE tgbot_vitrina2026.products
 SET description = REPLACE(description, '<br>', E'\n')
