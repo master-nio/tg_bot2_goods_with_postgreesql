@@ -114,10 +114,29 @@ python tg_bot_goods_main.py
 
 ## Список ближайших задач
 - [x] Отладка локальной версии
+- [ ] Создать файл requirements.txt. Для pip install -r requirements.txt
 - [ ] Review кода и PEP-8 в рамках разумного
 - [ ] Подготовка обработчика сообщений к VDS loop.run_until_complete(application.bot.get_me()) 
 - [ ] Перенос бота на VDS Ubuntu и запуск как процесса
 - [ ] Упразднить этот раздел и перенести новые задачи в github issue 
+
+## Установка на VDS
+1. Подключиться по SSH к VDS 
+2. Создать папку mkdir /opt/tg_bot2_goods_with_postgreesql
+3. cd /opt/tg_bot2_goods_with_postgreesql
+4. git clone https://github.com/master-nio/tg_bot2_goods_with_postgreesql.git .
+5. nano tg_bot_token.data записать токен вашего бота
+6. python3 -m venv venv
+7. source venv/bin/activate
+8. pip install python-telegram-bot asyncpg
+9. test run & check telegram bot command /start /help no /catalog.   python tg_bot_goods_main.py
+10. create process in VDS
+11. nano /etc/systemd/system/tg_bot2_goods_with_postgreesql.service make file
+12. systemctl daemon-reload
+13. systemctl enable tg_bot2_goods_with_postgreesql.service
+14. systemctl start tg_bot2_goods_with_postgreesql.service
+15. systemctl status tg_bot2_goods_with_postgreesql.service -n 20
+
 
 ## Лицензия
 

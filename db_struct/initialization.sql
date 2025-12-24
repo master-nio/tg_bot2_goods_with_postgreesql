@@ -1,3 +1,11 @@
+sudo -u postgres psql -d tg_shops
+\c tg_shops
+create database tg_shops;
+
+CREATE SCHEMA tgbot_vitrina2026 AUTHORIZATION postgres;
+
+
+
 CREATE TABLE tgbot_vitrina2026.products (
     id              SERIAL PRIMARY KEY,
     name            TEXT NOT NULL,
@@ -10,8 +18,12 @@ CREATE TABLE tgbot_vitrina2026.products (
     -- Флаги и метаданные
     is_deleted      BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_by      BIGINT,         -- ID пользователя Telegram/системы
-    deleted_at      TIMESTAMP
+    deleted_at      TIMESTAMP,
+    sort INT NOT NULL DEFAULT 0
 );
+
+view tables in postgresql
+\dt tgbot_vitrina2026.*
 
 alter table tgbot_vitrina2026.products 
 add column sort INT NOT NULL DEFAULT 0;
@@ -33,22 +45,22 @@ INSERT INTO tgbot_vitrina2026.products (name, description, price)
 VALUES
 (
     'Новогодняя ёлка Premium',
-    '<b>Премиальная искусственная ёлка</b><br>
-     Пышная, высокая и максимально приближенная к настоящей.<br>
+    '<b>Премиальная искусственная ёлка</b>\n
+     Пышная, высокая и максимально приближенная к настоящей.\n
      Идеально впишется в интерьер и создаст волшебную праздничную атмосферу.',
     9999.99
 ),
 (
     'Новогодняя ёлка Standart',
-    '<b>Классическая новогодняя ёлка</b><br>
-     Умеренная плотность веток, аккуратная форма и стильный внешний вид.<br>
+    '<b>Классическая новогодняя ёлка</b>\n
+     Умеренная плотность веток, аккуратная форма и стильный внешний вид.\n
      Отличный выбор для квартиры или небольшого офиса.',
     5999.99
 ),
 (
     'Новогодняя ёлка Easy',
-    '<b>Компактная и удобная ёлка</b><br>
-     Лёгкая, быстро собирается, не занимает много места.<br>
+    '<b>Компактная и удобная ёлка</b>\n
+     Лёгкая, быстро собирается, не занимает много места.\n
      Подойдёт для стола, тумбы или небольшого пространства.',
     2999.99
 );
@@ -58,10 +70,11 @@ SET description = REPLACE(description, '<br>', E'\n')
 WHERE description LIKE '%<br>%';
 
 update tgbot_vitrina2026.products
-set price = trunc(price)
+set price = trunc(price);
 
 update tgbot_vitrina2026.products
 set name = '<b>' || name || '</b>';
+
 
 update tgbot_vitrina2026.products
 SET description = REPLACE(description, '<b>', '')
@@ -86,7 +99,7 @@ LEFT JOIN product_photos f ON p.id = f.product_id
 WHERE 
 	is_deleted = FALSE
 	AND sort = 0
-ORDER BY id
+ORDER BY id;
 
 CREATE INDEX idx_products_not_deleted
 ON tgbot_vitrina2026.products (is_deleted)
@@ -126,7 +139,7 @@ select * from  product_photos
 
 
 --Создаем пользователя
-CREATE USER tgbot_reader WITH PASSWORD 'sdf$&^$oiydfSzQ';
+CREATE USER tgbot_reader WITH PASSWORD 'sZdf$&^$oiydfSzQ7';
 
 
 -- Эта роль может быть использована для чтения любых таблиц в схеме tgbot_vitrina2026
@@ -221,7 +234,7 @@ select * from user_basket
 CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.orders (
     id SERIAL PRIMARY KEY,
     order_number VARCHAR(50) UNIQUE NOT NULL,
-    telegram_user_id VARCHAR(50) NOT NULL,
+    telegram_user_id BIGINT NOT NULL,
     customer_name VARCHAR(100) NOT NULL,
     customer_email VARCHAR(100),
     customer_phone VARCHAR(20) NOT NULL,
@@ -233,7 +246,10 @@ CREATE TABLE IF NOT EXISTS tgbot_vitrina2026.orders (
 );
 
 alter table tgbot_vitrina2026.orders
-ALTER COLUMN telegram_user_id::bigint type BIGINT;
+ALTER COLUMN telegram_user_id type BIGINT;
+
+ALTER TABLE tgbot_vitrina2026.orders
+ALTER COLUMN telegram_user_id TYPE BIGINT USING telegram_user_id::bigint;
 
 SELECT telegram_user_id 
 FROM tgbot_vitrina2026.orders 
